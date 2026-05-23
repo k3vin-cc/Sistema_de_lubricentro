@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Historial de Ventas</title>
+    <link rel="icon" type="image/png" href="{{ url_for('logo_static') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <style>
+        .filter-section { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+        .filter-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-buttons button { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
+        .filter-buttons button:hover { background: var(--primary-dark); transform: translateY(-2px); }
+        .filter-buttons button.active { background: var(--primary-dark); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .date-filters { display: flex; gap: 10px; align-items: center; }
+        .date-filters label { font-weight: 600; color: var(--text-primary); }
+        .date-filters input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-input); color: var(--text-primary); font-size: 14px; }
+        
+        .breadcrumb { display: flex; gap: 10px; align-items: center; margin-bottom: 15px; }
+        .breadcrumb button { padding: 6px 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 13px; color: var(--text-primary); }
+        .breadcrumb span { color: var(--text-secondary); }
+        
+        .periodo-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; }
+        .periodo-card:hover { border-color: var(--primary); transform: translateX(5px); }
+        .periodo-card-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .periodo-card-title { font-weight: 600; font-size: 16px; color: var(--text-primary); }
+        .periodo-card-totals { display: flex; gap: 20px; }
+        .periodo-card-total { text-align: right; }
+        .periodo-card-total.negocio { color: #28a745; }
+        .periodo-card-total.taller { color: #ffc107; }
+        .periodo-card-total label { display: block; font-size: 10px; text-transform: uppercase; color: var(--text-secondary); }
+        .periodo-card-total span { font-weight: 600; font-size: 14px; }
+        
+        .transaccion { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; overflow: hidden; }
+        .transaccion-header { background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .transaccion-fecha { font-size: 16px; font-weight: 600; }
+        .transaccion-info { display: flex; gap: 15px; font-size: 14px; }
+        .transaccion-metodo, .transaccion-boleta { background: rgba(255,255,255,0.2); padding: 4px 10px; border-radius: 4px; }
+        .transaccion-total { font-size: 18px; font-weight: bold; }
+        .transaccion-body { padding: 15px 20px; }
+        .seccion-tipo { margin-bottom: 15px; }
+        .seccion-tipo:last-child { margin-bottom: 0; }
+        .seccion-titulo { font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid var(--border); }
+        .seccion-titulo.negocio { color: #28a745; border-color: #28a745; }
+        .seccion-titulo.taller { color: #ffc107; border-color: #ffc107; }
+        .producto-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .producto-item:last-child { border-bottom: none; }
+        .producto-info { flex: 1; }
+        .producto-nombre { font-weight: 600; color: var(--text-primary); }
+        .producto-detalle { font-size: 12px; color: var(--text-secondary); }
+        .producto-cantidad { font-weight: 600; color: var(--primary); margin-right: 20px; }
+        .producto-precio { text-align: right; min-width: 100px; }
+        .producto-unitario { font-size: 12px; color: var(--text-secondary); }
+        .producto-total { font-weight: 600; color: var(--text-primary); }
+        .seccion-footer { display: flex; justify-content: space-between; padding-top: 10px; margin-top: 10px; border-top: 2px solid var(--border); font-weight: 600; }
+        .seccion-footer.negocio { color: #28a745; }
+        .seccion-footer.taller { color: #ffc107; }
+        
+        .total-general { background: var(--bg-card); border: 2px solid var(--primary); border-radius: 8px; padding: 20px; margin-bottom: 20px; display: flex; justify-content: space-around; flex-wrap: wrap; }
+        .total-item { text-align: center; padding: 10px 20px; }
+        .total-item label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-secondary); margin-bottom: 5px; }
+        .total-item .value { font-size: 24px; font-weight: bold; color: var(--primary); }
+        .no-data { text-align: center; padding: 40px; color: var(--text-secondary); font-size: 16px; }
+        
+        .paginacion { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px; }
+        .paginacion button { padding: 8px 16px; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.3s; }
+        .paginacion button:hover { background: var(--primary-dark); }
+        .paginacion button:disabled { background: var(--border); cursor: not-allowed; opacity: 0.5; }
+        .paginacion span { color: var(--text-primary); font-weight: 600; }
+        
+        @media (max-width: 768px) {
+            .filter-section { flex-direction: column; align-items: stretch; }
+            .transaccion-header { flex-direction: column; gap: 10px; text-align: center; }
+            .periodo-card-header { flex-direction: column; gap: 10px; }
+            .periodo-card-totals { width: 100%; justify-content: space-between; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="main-nav">
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">Stock Productos</a>
+        {% if session.rol in ['admin', 'editor'] %}
+        <a href="{{ url_for('agregar') }}" class="{% if request.path == url_for('agregar') %}active{% endif %}">Ingresar Nuevo Inventario</a>
+        {% endif %}
+        <a href="{{ url_for('ventas') }}" class="{% if request.path == url_for('ventas') %}active{% endif %}">Zona de Ventas</a>
+        {% if session.rol in ['admin', 'editor'] %}
+        <a href="{{ url_for('historial') }}" class="{% if request.path == url_for('historial') %}active{% endif %}">📊 Historial de Ventas</a>
+        {% endif %}
+        {% if session.rol == 'admin' %}
+        <a href="{{ url_for('admin_usuarios') }}" class="{% if request.path == url_for('admin_usuarios') %}active{% endif %}">👥 Usuarios</a>
+        {% endif %}
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span style="color: #666; font-size: 14px;">{{ session.usuario }} <strong>({{ session.rol }})</strong></span>
+        <a href="{{ url_for('logout') }}" style="color: #dc3545; text-decoration: none; font-weight: 600; padding: 8px 12px; background: #f8d7da; border-radius: 6px; border: none; cursor: pointer;">🚪 Salir</a>
+    </div>
+    <span class="nav-brand">Autosolution</span>
+</nav>
+
+<h2>HISTORIAL DE VENTAS</h2>
+
+<div id="totales-generales" class="total-general">
+    <div class="total-item"><label id="label-negocio">Total Negocio del Día</label><div class="value" id="total-negocio">$0.00</div></div>
+    <div class="total-item"><label id="label-taller">Total Taller del Día</label><div class="value" id="total-taller">$0.00</div></div>
+    <div class="total-item"><label id="label-general">Total General del Día</label><div class="value" id="total-general">$0.00</div></div>
+</div>
+
+<div class="filter-section">
+    <div class="filter-buttons">
+        <button onclick="cambiarPeriodo('diario')" id="btn-diario" class="active">Día</button>
+        <button onclick="cambiarPeriodo('semanal')" id="btn-semanal">Semana</button>
+        <button onclick="cambiarPeriodo('mensual')" id="btn-mensual">Mes</button>
+        <button onclick="cambiarPeriodo('anual')" id="btn-anual">Año</button>
+    </div>
+    <div class="date-filters">
+        <label>Desde:</label>
+        <input type="date" id="fechaDesde" onchange="cargarDatos()">
+        <label>Hasta:</label>
+        <input type="date" id="fechaHasta" onchange="cargarDatos()">
+    </div>
+</div>
+
+<div id="breadcrumb" class="breadcrumb" style="display: none;">
+    <button onclick="volver()">← Volver</button>
+    <span id="breadcrumb-text"></span>
+</div>
+
+<div id="contenedor"><div class="no-data">Cargando...</div></div>
+
+<div id="paginacion" class="paginacion" style="display: none;">
+    <button onclick="cambiarPagina(-1)" id="btn-anterior">← Anterior</button>
+    <span id="info-pagina">Página 1 de 1</span>
+    <button onclick="cambiarPagina(1)" id="btn-siguiente">Siguiente →</button>
+</div>
+
+<script>
+let estado = { periodo: 'diario', nivel: 'lista', seleccion: null, paginaActual: 1, transaccionesPorPagina: 10, transaccionesCache: [] };
+
+function formatDateLocal(d) {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function cambiarPeriodo(periodo) {
+    estado.periodo = periodo;
+    estado.nivel = 'lista';
+    estado.seleccion = null;
+    estado.paginaActual = 1;
+    
+    document.querySelectorAll('.filter-buttons button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btn-' + periodo).classList.add('active');
+    
+    
+    if (periodo === 'diario') {
+        document.getElementById('label-negocio').textContent = 'Total Negocio del Día';
+        document.getElementById('label-taller').textContent = 'Total Taller del Día';
+        document.getElementById('label-general').textContent = 'Total General del Día';
+    } else if (periodo === 'semanal') {
+        document.getElementById('label-negocio').textContent = 'Total Negocio de la Semana';
+        document.getElementById('label-taller').textContent = 'Total Taller de la Semana';
+        document.getElementById('label-general').textContent = 'Total General de la Semana';
+    } else if (periodo === 'mensual') {
+        document.getElementById('label-negocio').textContent = 'Total Negocio del Mes';
+        document.getElementById('label-taller').textContent = 'Total Taller del Mes';
+        document.getElementById('label-general').textContent = 'Total General del Mes';
+    } else if (periodo === 'anual') {
+        document.getElementById('label-negocio').textContent = 'Total Negocio del Año';
+        document.getElementById('label-taller').textContent = 'Total Taller del Año';
+        document.getElementById('label-general').textContent = 'Total General del Año';
+    }
+    
+    const hoy = new Date();
+    let fd = new Date(hoy), fh = new Date(hoy);
+    
+    if (periodo === 'diario') { }
+    else if (periodo === 'semanal') { fd.setDate(hoy.getDate() - hoy.getDay() + (hoy.getDay() === 0 ? -6 : 1)); }
+    else if (periodo === 'mensual') { fd.setDate(1); fh.setMonth(hoy.getMonth() + 1); fh.setDate(0); }
+    else if (periodo === 'anual') { fd = new Date(hoy.getFullYear(), 0, 1); fh = new Date(hoy.getFullYear(), 11, 31); }
+    
+    document.getElementById('fechaDesde').value = formatDateLocal(fd);
+    document.getElementById('fechaHasta').value = formatDateLocal(fh);
+    cargarDatos();
+}
+
+function cargarDatos() {
+    const desde = document.getElementById('fechaDesde').value;
+    const hasta = document.getElementById('fechaHasta').value;
+    
+    let url = '/api/historial?tipo=ventas_taller_negocio&desde=' + desde + '&hasta=' + hasta;
+    
+    if (estado.periodo === 'mensual' && estado.nivel === 'lista') {
+        url += '&ver=semanas';
+    } else if (estado.periodo === 'anual' && estado.nivel === 'lista') {
+        url += '&ver=meses';
+    }
+    
+    fetch(url).then(r => r.json()).then(data => {
+        if (estado.periodo === 'mensual' && estado.nivel === 'lista') {
+            mostrarSemanas(data.semanas || []);
+        } else if (estado.periodo === 'anual' && estado.nivel === 'lista') {
+            mostrarMeses(data.meses || []);
+        } else {
+            mostrarTransacciones(data.transacciones || []);
+        }
+    }).catch(err => {
+        console.error(err);
+        document.getElementById('contenedor').innerHTML = '<div class="no-data">Error al cargar</div>';
+    });
+}
+
+function mostrarSemanas(semanas) {
+    const contenedor = document.getElementById('contenedor');
+    document.getElementById('paginacion').style.display = 'none';
+    
+    if (!semanas.length) { contenedor.innerHTML = '<div class="no-data">No hay ventas</div>'; return; }
+    
+    let html = ''; let totalN = 0, totalT = 0;
+    
+    semanas.forEach(s => {
+        totalN += s.negocio; totalT += s.taller;
+        const titulo = s.rango ? 'Semana ' + s.semana + ' del mes (' + s.rango + ')' : 'Semana ' + s.semana;
+        
+        html += '<div class="periodo-card" onclick="verSemana(\'' + s.periodo + '\')">' +
+            '<div class="periodo-card-header">' +
+                '<div class="periodo-card-title">📅 ' + titulo + '</div>' +
+                '<div class="periodo-card-totals">' +
+                    '<div class="periodo-card-total negocio"><label>Negocio</label><span>$' + s.negocio.toFixed(2) + '</span></div>' +
+                    '<div class="periodo-card-total taller"><label>Taller</label><span>$' + s.taller.toFixed(2) + '</span></div>' +
+                    '<div class="periodo-card-total"><label>Total</label><span>$' + s.total.toFixed(2) + '</span></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    });
+    
+    contenedor.innerHTML = html;
+    actualizarTotales(totalN, totalT);
+    actualizarBreadcrumb();
+}
+
+function mostrarMeses(meses) {
+    const contenedor = document.getElementById('contenedor');
+    document.getElementById('paginacion').style.display = 'none';
+    
+    if (!meses.length) { contenedor.innerHTML = '<div class="no-data">No hay ventas</div>'; return; }
+    
+    let html = ''; let totalN = 0, totalT = 0;
+    
+    meses.forEach(m => {
+        totalN += m.negocio; totalT += m.taller;
+        html += '<div class="periodo-card" onclick="verMes(\'' + m.periodo + '\')">' +
+            '<div class="periodo-card-header">' +
+                '<div class="periodo-card-title">📆 ' + m.nombre + ' ' + m.año + '</div>' +
+                '<div class="periodo-card-totals">' +
+                    '<div class="periodo-card-total negocio"><label>Negocio</label><span>$' + m.negocio.toFixed(2) + '</span></div>' +
+                    '<div class="periodo-card-total taller"><label>Taller</label><span>$' + m.taller.toFixed(2) + '</span></div>' +
+                    '<div class="periodo-card-total"><label>Total</label><span>$' + m.total.toFixed(2) + '</span></div>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    });
+    
+    contenedor.innerHTML = html;
+    actualizarTotales(totalN, totalT);
+    actualizarBreadcrumb();
+}
+
+function verSemana(semana) {
+    estado.nivel = 'detalle';
+    estado.seleccion = semana;
+    estado.paginaActual = 1;
+    cargarDatos();
+}
+
+function verMes(mes) {
+    const partes = mes.split('-');
+    const anio = parseInt(partes[0]);
+    const mesNum = parseInt(partes[1]);
+    
+    const primerDia = new Date(anio, mesNum - 1, 1);
+    const ultimoDia = new Date(anio, mesNum, 0);
+    
+    document.getElementById('fechaDesde').value = formatDateLocal(primerDia);
+    document.getElementById('fechaHasta').value = formatDateLocal(ultimoDia);
+    
+    estado.nivel = 'detalle';
+    estado.seleccion = mes;
+    estado.paginaActual = 1;
+    cargarDatos();
+}
+
+function volver() {
+    estado.nivel = 'lista';
+    estado.seleccion = null;
+    estado.paginaActual = 1;
+    
+    if (estado.periodo === 'anual') {
+        const hoy = new Date();
+        const fd = new Date(hoy.getFullYear(), 0, 1);
+        const fh = new Date(hoy.getFullYear(), 11, 31);
+        document.getElementById('fechaDesde').value = formatDateLocal(fd);
+        document.getElementById('fechaHasta').value = formatDateLocal(fh);
+    } else if (estado.periodo === 'mensual') {
+        const hoy = new Date();
+        const fd = new Date(hoy);
+        fd.setDate(1);
+        const fh = new Date(hoy);
+        fh.setMonth(hoy.getMonth() + 1);
+        fh.setDate(0);
+        document.getElementById('fechaDesde').value = formatDateLocal(fd);
+        document.getElementById('fechaHasta').value = formatDateLocal(fh);
+    }
+    
+    cargarDatos();
+}
+
+function actualizarBreadcrumb() {
+    const bc = document.getElementById('breadcrumb');
+    const texto = document.getElementById('breadcrumb-text');
+    
+    if (estado.nivel === 'lista') { bc.style.display = 'none'; return; }
+    
+    bc.style.display = 'flex';
+    
+    if (estado.periodo === 'mensual') {
+        texto.textContent = ' > Ver transacciones de la semana';
+    } else if (estado.periodo === 'anual') {
+        const mesNum = estado.seleccion ? parseInt(estado.seleccion.split('-')[1]) : 0;
+        const anio = estado.seleccion ? estado.seleccion.split('-')[0] : '';
+        texto.textContent = ' > Transacciones de ' + getNombreMes(mesNum) + ' ' + anio;
+    }
+}
+
+function getNombreMes(mes) {
+    const meses = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return meses[mes] || '';
+}
+
+function actualizarTotales(n, t) {
+    document.getElementById('total-negocio').textContent = '$ ' + n.toFixed(2);
+    document.getElementById('total-taller').textContent = '$ ' + t.toFixed(2);
+    document.getElementById('total-general').textContent = '$ ' + (n + t).toFixed(2);
+}
+
+function cambiarPagina(direccion) {
+    estado.paginaActual += direccion;
+    mostrarTransaccionesPaginadas();
+}
+
+function mostrarTransaccionesPaginadas() {
+    const contenedor = document.getElementById('contenedor');
+    const paginacionDiv = document.getElementById('paginacion');
+    
+    if (!estado.transaccionesCache || !estado.transaccionesCache.length) {
+        contenedor.innerHTML = '<div class="no-data">No hay ventas</div>';
+        paginacionDiv.style.display = 'none';
+        actualizarTotales(0, 0);
+        return;
+    }
+    
+    const transacciones = estado.transaccionesCache;
+    const totalPags = Math.ceil(transacciones.length / estado.transaccionesPorPagina);
+    const inicio = (estado.paginaActual - 1) * estado.transaccionesPorPagina;
+    const fin = inicio + estado.transaccionesPorPagina;
+    const transaccionesPagina = transacciones.slice(inicio, fin);
+    
+    let html = ''; let totalN = 0, totalT = 0;
+    
+    
+    transacciones.forEach(trans => {
+        let subN = trans.negocio.reduce((sum, v) => sum + v.total_venta, 0);
+        let subT = trans.taller.reduce((sum, v) => sum + v.total_venta, 0);
+        totalN += subN;
+        totalT += subT;
+    });
+    
+    
+    transaccionesPagina.forEach(trans => {
+        let subN = trans.negocio.reduce((sum, v) => sum + v.total_venta, 0);
+        let subT = trans.taller.reduce((sum, v) => sum + v.total_venta, 0);
+        let total = subN + subT;
+        
+        const fecha = new Date(trans.fecha).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        
+        html += '<div class="transaccion">' +
+            '<div class="transaccion-header">' +
+                '<div class="transaccion-fecha">' + fecha + '</div>' +
+                '<div class="transaccion-info">' +
+                    '<span class="transaccion-metodo">💳 ' + (trans.metodo_Pago || '-') + '</span>' +
+                    '<span class="transaccion-boleta">📄 ' + (trans.n_boleta_factura || '-') + '</span>' +
+                '</div>' +
+                '<div class="transaccion-total">$ ' + total.toFixed(2) + '</div>' +
+            '</div>' +
+            '<div class="transaccion-body">';
+        
+        if (trans.negocio.length) {
+            html += '<div class="seccion-tipo"><div class="seccion-titulo negocio">Negocio</div>';
+            trans.negocio.forEach(p => {
+                html += '<div class="producto-item">' +
+                    '<div class="producto-info"><div class="producto-nombre">' + p.nombre_producto + '</div>' +
+                    '<div class="producto-detalle">' + (p.nombre_marca || 'Sin marca') + ' • Desc: ' + p.descuento_porcentaje + '%</div></div>' +
+                    '<div class="producto-cantidad">x' + p.cantidad_vendida + '</div>' +
+                    '<div class="producto-precio"><div class="producto-unitario">$' + p.precio_unitario.toFixed(2) + '</div>' +
+                    '<div class="producto-total">$' + p.total_venta.toFixed(2) + '</div></div></div>';
+            });
+            html += '<div class="seccion-footer negocio"><span>Subtotal Negocio</span><span>$ ' + subN.toFixed(2) + '</span></div></div>';
+        }
+        
+        if (trans.taller.length) {
+            html += '<div class="seccion-tipo"><div class="seccion-titulo taller">Taller</div>';
+            trans.taller.forEach(p => {
+                html += '<div class="producto-item">' +
+                    '<div class="producto-info"><div class="producto-nombre">' + p.nombre_producto + '</div>' +
+                    '<div class="producto-detalle">' + (p.nombre_marca || 'Sin marca') + ' • Desc: ' + p.descuento_porcentaje + '%</div></div>' +
+                    '<div class="producto-cantidad">x' + p.cantidad_vendida + '</div>' +
+                    '<div class="producto-precio"><div class="producto-unitario">$' + p.precio_unitario.toFixed(2) + '</div>' +
+                    '<div class="producto-total">$' + p.total_venta.toFixed(2) + '</div></div></div>';
+            });
+            html += '<div class="seccion-footer taller"><span>Subtotal Taller</span><span>$ ' + subT.toFixed(2) + '</span></div></div>';
+        }
+        
+        html += '</div></div>';
+    });
+    
+    contenedor.innerHTML = html;
+    actualizarTotales(totalN, totalT);
+    actualizarBreadcrumb();
+    
+    
+    if (totalPags > 1) {
+        paginacionDiv.style.display = 'flex';
+        document.getElementById('info-pagina').textContent = 'Página ' + estado.paginaActual + ' de ' + totalPags;
+        document.getElementById('btn-anterior').disabled = estado.paginaActual === 1;
+        document.getElementById('btn-siguiente').disabled = estado.paginaActual === totalPags;
+    } else {
+        paginacionDiv.style.display = 'none';
+    }
+}
+
+function mostrarTransacciones(transacciones) {
+    if (!transacciones.length) { 
+        document.getElementById('contenedor').innerHTML = '<div class="no-data">No hay ventas</div>'; 
+        document.getElementById('paginacion').style.display = 'none';
+        actualizarTotales(0, 0); 
+        return; 
+    }
+    
+    transacciones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+    
+    estado.transaccionesCache = transacciones;
+    estado.paginaActual = 1;
+    
+    mostrarTransaccionesPaginadas();
+}
+
+window.addEventListener('load', () => cambiarPeriodo('diario'));
+</script>
+
+</body>
+</html>

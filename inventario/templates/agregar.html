@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agregar Datos</title>
+    <link rel="icon" type="image/png" href="{{ url_for('logo_static') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/agregar.css') }}">
+    <style>
+    .main-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--border);margin-bottom:1rem}
+    .nav-links{display:flex;gap:12px;align-items:center}
+    .main-nav a{color:var(--text-primary);text-decoration:none;padding:8px 12px;border-radius:8px;background:transparent;border:2px solid transparent;font-weight:600}
+    .main-nav a:hover{background:var(--bg-input);border-color:var(--border-light);color:var(--primary)}
+    .main-nav a.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white;border-color:transparent;box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+    .nav-brand{margin-left:auto;font-weight:700;color:var(--text-primary);}
+    
+    #contenedor-camara-agregar {margin-top: 15px;padding: 15px;background: #f8f9fa;border-radius: 8px;border: 2px solid #dee2e6;}
+    #video-camara-agregar {width: 100%;max-width: 500px;margin: 0 auto;display: block;border-radius: 8px;overflow: hidden;}
+    #estado-escaneo-agregar {margin-top: 12px;padding: 10px;text-align: center;font-weight: bold;border-radius: 6px;background: white;font-size: 14px;}
+    #estado-escaneo-agregar.success {color: #28a745;background: #d4edda;border: 1px solid #c3e6cb;}
+    #estado-escaneo-agregar.error {color: #dc3545;background: #f8d7da;border: 1px solid #f5c6cb;}
+    #estado-escaneo-agregar.scanning {color: #007bff;background: #d1ecf1;border: 1px solid #bee5eb;}
+    #btn-camara-agregar {padding: 10px 16px;font-size: 15px;cursor: pointer;background: #28a745;color: white;border: none;border-radius: 6px;font-weight: 600;transition: all 0.2s;margin-left: 8px;}
+    #btn-camara-agregar:hover {background: #218838;transform: translateY(-1px);}
+    #btn-camara-agregar:active {transform: translateY(0);}
+
+    #btn-generar-codigo {padding: 10px 16px;font-size: 15px;cursor: pointer;background: #007bff;color: white;border: none;border-radius: 6px;font-weight: 600;transition: all 0.2s;margin-left: 8px;}
+    #btn-generar-codigo:hover {background: #0069d9;transform: translateY(-1px);}
+    #btn-generar-codigo:active {transform: translateY(0);}
+    
+    .accordion {border: 1px solid #ddd; border-radius: 6px; margin-bottom: 10px;}
+    .accordion-header {background: linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%); color: white; padding: 12px 15px; cursor: pointer; font-weight: 600; display: flex; justify-content: space-between; align-items: center; border-radius: 6px;}
+    .accordion-header:hover {opacity: 0.9;}
+    .accordion-header::after {content: '▼'; font-size: 12px;}
+    .accordion-header.active::after {content: '▲';}
+    .accordion-content {max-height: 0; overflow: hidden; transition: max-height 0.3s ease; padding: 0 15px;}
+    .accordion-content.active {max-height: 2000px; padding: 15px;}
+    .form-group {margin-bottom: 12px;}
+    .form-group label {display: block; margin-bottom: 5px; font-weight: 500; color: var(--text-primary);}
+    .form-group input, .form-group select {width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box;}
+    .form-row {display: grid; grid-template-columns: 1fr 1fr; gap: 15px;}
+    @media (max-width: 768px) {.form-row {grid-template-columns: 1fr;}}
+    </style>
+</head>
+<body>
+
+<nav class="main-nav">
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">Stock Productos</a>
+        {% if session.rol in ['admin', 'editor'] %}
+        <a href="{{ url_for('agregar') }}" class="{% if request.path == url_for('agregar') %}active{% endif %}">Ingresar Nuevo Inventario</a>
+        {% endif %}
+        <a href="{{ url_for('ventas') }}" class="{% if request.path == url_for('ventas') %}active{% endif %}">Zona de Ventas</a>
+        {% if session.rol in ['admin', 'editor'] %}
+        <a href="{{ url_for('historial') }}" class="{% if request.path == url_for('historial') %}active{% endif %}">📊 Historial de Ventas</a>
+        {% endif %}
+        {% if session.rol == 'admin' %}
+        <a href="{{ url_for('admin_usuarios') }}" class="{% if request.path == url_for('admin_usuarios') %}active{% endif %}">👥 Usuarios</a>
+        {% endif %}
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span style="color: #666; font-size: 14px;">{{ session.usuario }} <strong>({{ session.rol }})</strong></span>
+        <a href="{{ url_for('logout') }}" style="color: #dc3545; text-decoration: none; font-weight: 600; padding: 8px 12px; background: #f8d7da; border-radius: 6px; border: none; cursor: pointer;">🚪 Salir</a>
+    </div>
+    <span class="nav-brand">Autosolution</span>
+</nav>
+
+<h2>Agregar Datos</h2>
+{% if exito %}
+<div style="margin-top:12px;padding:12px;background:#d4edda;color:#155724;border-radius:6px;border:1px solid #c3e6cb;font-weight:bold;">
+    Dato guardado correctamente
+</div>
+{% endif %}
+
+<form method="get" action="/agregar">
+    <label>Seleccionar tabla:</label>
+    <select name="tabla" onchange="this.form.submit()">
+        <option value="productos" {% if tabla == 'productos' %}selected{% endif %}>Productos</option>
+        <option value="proveedores" {% if tabla == 'proveedores' %}selected{% endif %}>Proveedores</option>
+        <option value="tipos" {% if tabla == 'tipos' %}selected{% endif %}>Tipos de Producto</option>
+        <option value="marcas" {% if tabla == 'marcas' %}selected{% endif %}>Marcas</option>
+    </select>
+</form>
+
+<hr>
+
+<form method="post">
+
+{% if tabla == "productos" %}
+    <h3>Agregar Producto</h3>
+
+    
+    <div class="accordion">
+        <div class="accordion-header active" onclick="toggleAccordion(this)">📋 Información Básica</div>
+        <div class="accordion-content active">
+            <div class="form-group">
+                <label>Código de Barra</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="codigo_barra" id="codigo_barra" autocomplete="off" style="flex: 1;">
+                    <button type="button" id="btn-generar-codigo" onclick="generarCodigoBarrasUnico()">✨ Generar</button>
+                    <button type="button" id="btn-camara-agregar" onclick="toggleCamaraAgregar()" style="display: none; padding: 8px 12px;">📷 Escanear</button>
+                </div>
+            </div>
+            <div id="contenedor-camara-agregar" style="display: none;">
+                <div id="video-camara-agregar"></div>
+                <div id="estado-escaneo-agregar" class="scanning">Preparando cámara...</div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" name="nombre_producto" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <input type="text" name="descripcion" autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="accordion">
+        <div class="accordion-header active" onclick="toggleAccordion(this)">🏷️ Clasificación</div>
+        <div class="accordion-content active">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Tipo de Producto</label>
+                    <select name="id_tipo" required>
+                        {% for t in tipos %}
+                        <option value="{{ t.id_tipo }}">{{ t.nombre_tipo }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Marca</label>
+                    <select name="id_marca" required>
+                        {% for m in marcas %}
+                        <option value="{{ m.id_marca }}">{{ m.nombre_marca }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Proveedor</label>
+                <select name="id_proveedor" required>
+                    {% for p in proveedores %}
+                    <option value="{{ p.id_proveedor }}">{{ p.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="accordion">
+        <div class="accordion-header active" onclick="toggleAccordion(this)">💰 Precios y Ganancias</div>
+        <div class="accordion-content active">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Precio Compra</label>
+                    <input type="number" step="0.01" name="precio_compra" id="precio_compra" oninput="calcular()" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>% Ganancia</label>
+                    <input type="number" step="0.01" name="porcentaje_ganancia" id="porcentaje_ganancia" oninput="calcular()" autocomplete="off">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Precio Neto (auto)</label>
+                    <input type="number" step="0.01" id="precio_neto" class="readonly" readonly>
+                </div>
+                <div class="form-group">
+                    <label>IVA 19% (auto)</label>
+                    <input type="number" step="0.01" id="iva" class="readonly" readonly>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Precio Venta (final)</label>
+                    <input type="number" step="0.01" name="precio_venta" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Stock (Unidades)</label>
+                    <input type="number" name="cantidad" required autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <input type="hidden" name="precio_neto" id="precio_neto_real">
+    <input type="hidden" name="iva" id="iva_real">
+
+{% elif tabla == "proveedores" %}
+    <h3>Agregar Proveedor</h3>
+    <div class="accordion">
+        <div class="accordion-header active" onclick="toggleAccordion(this)">👥 Datos del Proveedor</div>
+        <div class="accordion-content active">
+            <div class="form-group">
+                <label>Nombre</label>
+                <input type="text" name="nombre" required autocomplete="off">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" name="telefono" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" autocomplete="off">
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% elif tabla == "tipos" %}
+    <h3>Agregar Tipo de Producto</h3>
+    <div class="accordion">
+        <div class="accordion-header active" onclick="toggleAccordion(this)">📂 Tipo de Producto</div>
+        <div class="accordion-content active">
+            <div class="form-group">
+                <label>Nombre Tipo</label>
+                <input type="text" name="nombre_tipo" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" name="descripcion" autocomplete="off">
+            </div>
+        </div>
+    </div>
+
+{% elif tabla == "marcas" %}
+    <h3>Agregar Marca</h3>
+    <div class="accordion">
+        <div class="accordion-header active" onclick="toggleAccordion(this)">🏢 Marca</div>
+        <div class="accordion-content active">
+            <div class="form-group">
+                <label>Nombre Marca</label>
+                <input type="text" name="nombre_marca" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Descripción</label>
+                <input type="text" name="descripcion" autocomplete="off">
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<button type="submit">Guardar</button>
+
+</form>
+
+<br>
+<a href="/">⟵ Volver</a>
+
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+function calcular() {
+    let compra = parseFloat(document.getElementById("precio_compra").value) || 0;
+    let ganancia = parseFloat(document.getElementById("porcentaje_ganancia").value) || 0;
+
+    let precio_neto = compra / (1 - (ganancia / 100));
+    let iva = precio_neto * 1.19;
+
+    document.getElementById("precio_neto").value = precio_neto.toFixed(2);
+    document.getElementById("iva").value = iva.toFixed(2);
+
+    document.getElementById("precio_neto_real").value = precio_neto.toFixed(2);
+    document.getElementById("iva_real").value = iva.toFixed(2);
+}
+
+document.getElementById("precio_compra").addEventListener("input", calcular);
+document.getElementById("porcentaje_ganancia").addEventListener("input", calcular);
+window.addEventListener("load", calcular);
+
+
+function toggleAccordion(header) {
+    const content = header.nextElementSibling;
+    const isActive = content.classList.contains('active');
+    
+    content.classList.toggle('active');
+    header.classList.toggle('active');
+    
+    if (isActive) {
+        content.style.maxHeight = '0px';
+    } else {
+        content.style.maxHeight = '2000px';
+    }
+}
+
+
+async function generarCodigoBarrasUnico() {
+    const tipoSelect = document.querySelector('select[name="id_tipo"]');
+    if (!tipoSelect || !tipoSelect.value) {
+        alert("Por favor, selecciona un 'Tipo de Producto' primero.");
+        return;
+    }
+    const idTipo = tipoSelect.value;
+    const idTipoPadded = idTipo.toString().padStart(3, '0');
+
+    let nuevoCodigo;
+    let existe = true;
+    let intentos = 0;
+    const maxIntentos = 100; 
+
+    while (existe && intentos < maxIntentos) {
+        const randomDigits = Math.floor(1000 + Math.random() * 9000).toString();
+        nuevoCodigo = `s${idTipoPadded}${randomDigits}a`;
+        intentos++;
+        
+        try {
+            const response = await fetch(`/verificar_codigo_barra/${nuevoCodigo}`);
+            if (!response.ok) {
+                throw new Error('Error al verificar el código de barras.');
+            }
+            const data = await response.json();
+            existe = data.existe;
+        } catch (error) {
+            alert(error.message);
+            return; 
+        }
+    }
+
+    if (intentos >= maxIntentos && existe) {
+        alert("No se pudo generar un código de barras único después de varios intentos. Por favor, inténtelo de nuevo.");
+        return;
+    }
+
+    document.getElementById('codigo_barra').value = nuevoCodigo;
+}
+
+
+
+
+let html5QrcodeScannerAgregar = null;
+let scannerActivoAgregar = false;
+
+function verificarSoporteCameraAgregar() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+window.addEventListener("load", function() {
+    const btnCamara = document.getElementById("btn-camara-agregar");
+    
+    if (verificarSoporteCameraAgregar()) {
+        btnCamara.style.display = "inline-block";
+        console.log('✓ Botón de cámara habilitado en agregar');
+    } else {
+        console.log('✗ Cámara no disponible');
+    }
+});
+
+function toggleCamaraAgregar() {
+    if (scannerActivoAgregar) {
+        cerrarCamaraAgregar();
+    } else {
+        abrirCamaraAgregar();
+    }
+}
+
+async function abrirCamaraAgregar() {
+    const contenedor = document.getElementById("contenedor-camara-agregar");
+    const btnCamara = document.getElementById("btn-camara-agregar");
+    const estado = document.getElementById("estado-escaneo-agregar");
+    
+    console.log('Iniciando cámara para agregar...');
+    
+    try {
+        if (typeof Html5Qrcode === 'undefined') {
+            throw new Error('La librería de escaneo no está cargada. Recarga la página.');
+        }
+        
+        contenedor.style.display = "block";
+        btnCamara.textContent = "⏹️ Cerrar Cámara";
+        estado.className = "scanning";
+        estado.textContent = "Preparando cámara...";
+        
+        if (!html5QrcodeScannerAgregar) {
+            html5QrcodeScannerAgregar = new Html5Qrcode("video-camara-agregar");
+        }
+        
+        const config = {
+            fps: 10,
+            qrbox: { width: 300, height: 150 },
+            formatsToSupport: [
+                Html5QrcodeScanType.SCAN_TYPE_CAMERA
+            ],
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        };
+        
+        await html5QrcodeScannerAgregar.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccessAgregar,
+            onScanErrorAgregar
+        );
+        
+        scannerActivoAgregar = true;
+        estado.textContent = "📷 Apunta al código de barras del producto";
+        console.log('✓ Cámara iniciada correctamente');
+        
+    } catch (error) {
+        console.error("Error al abrir cámara:", error);
+        estado.className = "error";
+        estado.textContent = "⚠ Error: " + error.message;
+        scannerActivoAgregar = false;
+        
+        setTimeout(() => {
+            contenedor.style.display = "none";
+            btnCamara.textContent = "📷 Escanear";
+        }, 3000);
+    }
+}
+
+function onScanSuccessAgregar(decodedText, decodedResult) {
+    console.log('✓ Código detectado en agregar:', decodedText);
+    
+    const estado = document.getElementById("estado-escaneo-agregar");
+    const codigoInput = document.getElementById("codigo_barra");
+    
+    
+    codigoInput.value = decodedText;
+    
+    
+    estado.className = "success";
+    estado.textContent = "✓ Código capturado: " + decodedText;
+    
+    
+    setTimeout(() => {
+        cerrarCamaraAgregar();
+    }, 800);
+}
+
+function onScanErrorAgregar(errorMessage) {
+    
+}
+
+function cerrarCamaraAgregar() {
+    const contenedor = document.getElementById("contenedor-camara-agregar");
+    const btnCamara = document.getElementById("btn-camara-agregar");
+    const estado = document.getElementById("estado-escaneo-agregar");
+    
+    console.log('Cerrando cámara de agregar...');
+    
+    if (html5QrcodeScannerAgregar && scannerActivoAgregar) {
+        html5QrcodeScannerAgregar.stop()
+            .then(() => {
+                console.log('✓ Cámara cerrada');
+                scannerActivoAgregar = false;
+                contenedor.style.display = "none";
+                btnCamara.textContent = "📷 Escanear";
+                estado.className = "scanning";
+                estado.textContent = "Preparando cámara...";
+            })
+            .catch(err => {
+                console.error('Error al cerrar cámara:', err);
+                scannerActivoAgregar = false;
+            });
+    } else {
+        contenedor.style.display = "none";
+        btnCamara.textContent = "📷 Escanear";
+        scannerActivoAgregar = false;
+    }
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tablas</title>
+    <link rel="icon" type="image/png" href="{{ url_for('logo_static') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tablas.css') }}">
+    <style>
+    .main-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--border);margin-bottom:1rem}
+    .nav-links{display:flex;gap:12px;align-items:center}
+    .main-nav a{color:var(--text-primary);text-decoration:none;padding:8px 12px;border-radius:8px;background:transparent;border:2px solid transparent;font-weight:600}
+    .main-nav a:hover{background:var(--bg-input);border-color:var(--border-light);color:var(--primary)}
+    .main-nav a.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white;border-color:transparent;box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+    .nav-brand{margin-left:auto;font-weight:700;color:var(--text-primary);}
+    .pagination{margin-top:2rem;text-align:center;padding:1rem;background:var(--bg-card);border-radius:8px;border:1px solid var(--border)}
+    .pagination p{margin:0 0 1rem 0;color:var(--text-secondary);font-size:0.9rem}
+    .pagination-buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .pagination-buttons a{padding:8px 16px;background:var(--primary);color:white;text-decoration:none;border-radius:6px;font-weight:600;transition:all 0.3s;border:none}
+    .pagination-buttons a:hover{background:var(--primary-dark);transform:translateY(-2px);box-shadow:var(--shadow-sm)}
+    
+    #contenedor-camara-tablas {margin-top: 15px;padding: 15px;background: #f8f9fa;border-radius: 8px;border: 2px solid #dee2e6;}
+    #video-camara-tablas {width: 100%;max-width: 500px;margin: 0 auto;display: block;border-radius: 8px;overflow: hidden;}
+    #estado-escaneo-tablas {margin-top: 12px;padding: 10px;text-align: center;font-weight: bold;border-radius: 6px;background: white;font-size: 14px;}
+    #estado-escaneo-tablas.success {color: #28a745;background: #d4edda;border: 1px solid #c3e6cb;}
+    #estado-escaneo-tablas.error {color: #dc3545;background: #f8d7da;border: 1px solid #f5c6cb;}
+    #estado-escaneo-tablas.scanning {color: #007bff;background: #d1ecf1;border: 1px solid #bee5eb;}
+    #btn-camara-tablas {padding: 10px 16px;font-size: 15px;cursor: pointer;background: #28a745;color: white;border: none;border-radius: 6px;font-weight: 600;transition: all 0.2s;margin-left: 8px;}
+    #btn-camara-tablas:hover {background: #218838;transform: translateY(-1px);}
+    #btn-camara-tablas:active {transform: translateY(0);}
+    
+    
+    .tooltip-container {position: relative; display: inline-block; width: 100%;}
+    .tooltip-text {
+        visibility: hidden;
+        width: max-content;
+        max-width: 400px;
+        background-color: #222;
+        color: #fff;
+        text-align: left;
+        padding: 8px 12px;
+        border-radius: 6px;
+        position: absolute;
+        z-index: 10000;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        font-size: 13px;
+        line-height: 1.4;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        white-space: normal;
+        overflow-wrap: break-word;
+        pointer-events: none;
+    }
+    .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #222 transparent transparent transparent;
+    }
+    .tooltip-container:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
+    
+    
+    .stock-critico {color: #ff0000 !important;}
+    .stock-bajo {color: #ffaa00 !important;}
+    .stock-normal {color: #ffffff !important;}
+    </style>
+</head>
+<body>
+
+<nav class="main-nav">
+    <div class="nav-links">
+        <a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">Stock Productos</a>
+        {% if session.rol in ['admin', 'editor'] %}
+        <a href="{{ url_for('agregar') }}" class="{% if request.path == url_for('agregar') %}active{% endif %}">Ingresar Nuevo Inventario</a>
+        {% endif %}
+        <a href="{{ url_for('ventas') }}" class="{% if request.path == url_for('ventas') %}active{% endif %}">Zona de Ventas</a>
+        {% if session.rol in ['admin', 'editor'] %}
+        <a href="{{ url_for('historial') }}" class="{% if request.path == url_for('historial') %}active{% endif %}">📊 Historial de Ventas</a>
+        {% endif %}
+        {% if session.rol == 'admin' %}
+        <a href="{{ url_for('admin_usuarios') }}" class="{% if request.path == url_for('admin_usuarios') %}active{% endif %}">👥 Usuarios</a>
+        {% endif %}
+    </div>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span style="color: #666; font-size: 14px;">{{ session.usuario }} <strong>({{ session.rol }})</strong></span>
+        <a href="{{ url_for('logout') }}" style="color: #dc3545; text-decoration: none; font-weight: 600; padding: 8px 12px; background: #f8d7da; border-radius: 6px; border: none; cursor: pointer;">🚪 Salir</a>
+    </div>
+    <span class="nav-brand">Autosolution</span>
+</nav>
+
+<h2>INVENTARIO</h2>
+
+<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+    <select id="tablaSelector" onchange="mostrarTabla()" style="padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 14px; background: var(--bg-input); color: var(--text-primary); cursor: pointer;">
+        <option value="productos">Productos</option>
+        {% if session.rol in ['admin', 'editor'] %}
+        <option value="proveedores">Proveedores</option>
+        <option value="tipos">Tipos de Producto</option>
+        <option value="marcas">Marcas</option>
+        {% endif %}
+    </select>
+    <div style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3); display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">💰</span>
+        <span>Total Precio Costo:</span>
+        <span style="font-size: 16px; background: rgba(255,255,255,0.2); padding: 2px 10px; border-radius: 4px;">${{ "{:,.0f}".format(total_precio_costo) }}</span>
+    </div>
+</div>
+
+<hr>
+
+
+<div id="productos" class="table-section">
+    <h3>Productos</h3>
+    
+    
+    <div class="search-filter-container">
+        <div class="search-box">
+            <input type="text" id="busquedaProducto" placeholder="Buscar por código de barras o nombre..." value="{{ filtros.get('busqueda', '') }}" autocomplete="off">
+            <button type="button" id="btn-camara-tablas" onclick="toggleCamaraTablas()" style="display: none;">📷 Escanear</button>
+        </div>
+        <div class="search-box">
+            <input type="text" id="busquedaDescripcion" placeholder="Buscar por descripción..." value="{{ filtros.get('busqueda_desc', '') }}" autocomplete="off">
+        </div>
+        <div class="filter-box">
+            <select id="filtroTipo">
+                <option value="">Todos los tipos</option>
+                {% for t in tipos %}
+                <option value="{{ t.id_tipo }}" {% if filtros.get('tipo') == t.id_tipo|string %}selected{% endif %}>{{ t.nombre_tipo }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-box">
+            <select id="filtroProveedor">
+                <option value="">Todos los proveedores</option>
+                {% for prov in proveedores %}
+                <option value="{{ prov.id_proveedor }}" {% if filtros.get('proveedor') == prov.id_proveedor|string %}selected{% endif %}>{{ prov.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-box">
+            <select id="filtroMarca">
+                <option value="">Todas las marcas</option>
+                {% for m in marcas %}
+                <option value="{{ m.id_marca }}" {% if filtros.get('marca') == m.id_marca|string %}selected{% endif %}>{{ m.nombre_marca }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-box">
+            <select id="filtroStock">
+                <option value="">Todos los stocks</option>
+                <option value="sin-stock" {% if filtros.get('stock') == 'sin-stock' %}selected{% endif %}>Sin stock (0)</option>
+                <option value="poco-stock" {% if filtros.get('stock') == 'poco-stock' %}selected{% endif %}>Poco stock (1-8)</option>
+                <option value="normal" {% if filtros.get('stock') == 'normal' %}selected{% endif %}>Stock normal (>8)</option>
+            </select>
+        </div>
+        <button class="btn-apply" onclick="aplicarFiltros()">Aplicar filtros</button>
+        <button class="btn-clear" onclick="limpiarFiltros()">Limpiar filtros</button>
+    </div>
+    
+    
+    <div id="contenedor-camara-tablas" style="display: none;">
+        <div id="video-camara-tablas"></div>
+        <div id="estado-escaneo-tablas" class="scanning">Preparando cámara...</div>
+    </div>
+    
+    <p id="msg_productos" class="ok"></p>
+    <table id="tablaProductos">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Cód. Barra</th>
+                <th>Nombre</th>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th>Proveedor</th>
+                <th>Marca</th>
+                {% if session.rol in ['admin', 'editor'] %}<th>P.Compra</th>{% endif %}
+                {% if session.rol in ['admin', 'editor'] %}<th>venta (%)</th>{% endif %}
+                {% if session.rol in ['admin', 'editor'] %}<th>Neto</th>{% endif %}
+                {% if session.rol in ['admin', 'editor'] %}<th>IVA</th>{% endif %}
+                <th>Venta</th>
+                <th>Stock</th>
+                {% if session.rol in ['admin', 'editor'] %}<th>Precio Costo Total</th>{% endif %}
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in productos %}
+            <tr id="fila_producto_{{ p.id_producto }}" 
+                data-codigo="{{ p.codigo_barra }}" 
+                data-nombre="{{ p.nombre_producto }}" 
+                data-descripcion="{{ p.descripcion }}"
+                data-tipo="{{ p.id_tipo }}"
+                data-proveedor="{{ p.id_proveedor }}"
+                data-marca="{{ p.id_marca }}">
+                <td data-label="ID"><input class="edit" value="{{ p.id_producto }}" disabled></td>
+                <td data-label="Cód. Barra"><div class="tooltip-container"><input class="edit" id="cb_{{ p.id_producto }}" value="{{ p.codigo_barra }}" disabled><span class="tooltip-text">{{ p.codigo_barra }}</span></div></td>
+                <td data-label="Nombre"><div class="tooltip-container"><input class="edit" id="nom_{{ p.id_producto }}" value="{{ p.nombre_producto }}" disabled><span class="tooltip-text">{{ p.nombre_producto }}</span></div></td>
+                <td data-label="Descripción"><div class="tooltip-container"><input class="edit" id="des_{{ p.id_producto }}" value="{{ p.descripcion }}" disabled><span class="tooltip-text">{{ p.descripcion }}</span></div></td>
+                <td data-label="Tipo">
+                    <div class="tooltip-container"><select class="edit" id="tipo_{{ p.id_producto }}" disabled>
+                        {% for t in tipos %}
+                        <option value="{{ t.id_tipo }}" {% if t.id_tipo == p.id_tipo %}selected{% endif %}>{{ t.nombre_tipo }}</option>
+                        {% endfor %}
+                    </select><span class="tooltip-text">{{ tipos | selectattr('id_tipo', 'equalto', p.id_tipo) | map(attribute='nombre_tipo') | first }}</span></div>
+                </td>
+                <td data-label="Proveedor">
+                    <div class="tooltip-container"><select class="edit" id="prov_{{ p.id_producto }}" disabled>
+                        {% for prov in proveedores %}
+                        <option value="{{ prov.id_proveedor }}" {% if prov.id_proveedor == p.id_proveedor %}selected{% endif %}>{{ prov.nombre }}</option>
+                        {% endfor %}
+                    </select><span class="tooltip-text">{{ proveedores | selectattr('id_proveedor', 'equalto', p.id_proveedor) | map(attribute='nombre') | first }}</span></div>
+                </td>
+                <td data-label="Marca">
+                    <div class="tooltip-container"><select class="edit" id="marc_{{ p.id_producto }}" disabled>
+                        {% for m in marcas %}
+                        <option value="{{ m.id_marca }}" {% if m.id_marca == p.id_marca %}selected{% endif %}>{{ m.nombre_marca }}</option>
+                        {% endfor %}
+                    </select><span class="tooltip-text">{{ marcas | selectattr('id_marca', 'equalto', p.id_marca) | map(attribute='nombre_marca') | first }}</span></div>
+                </td>
+                {% if session.rol in ['admin', 'editor'] %}<td data-label="Compra"><div class="tooltip-container"><input class="edit" id="compr_{{ p.id_producto }}" value="{{ p.precio_compra }}" disabled><span class="tooltip-text">{{ p.precio_compra }}</span></div></td>{% endif %}
+                {% if session.rol in ['admin', 'editor'] %}<td data-label="porcentaje de venta (%)"><div class="tooltip-container"><input class="edit" id="porc_{{ p.id_producto }}" value="{{ p.porcentaje_ganancia }}" disabled><span class="tooltip-text">{{ p.porcentaje_ganancia }}</span></div></td>{% endif %}
+                {% if session.rol in ['admin', 'editor'] %}<td data-label="Neto"><div class="tooltip-container"><input class="edit readonly" id="neto_{{ p.id_producto }}" value="{{ p.precio_neto }}" readonly><span class="tooltip-text">{{ p.precio_neto }}</span></div></td>{% endif %}
+                {% if session.rol in ['admin', 'editor'] %}<td data-label="IVA"><div class="tooltip-container"><input class="edit readonly" id="iva_{{ p.id_producto }}" value="{{ p.iva }}" readonly><span class="tooltip-text">{{ p.iva }}</span></div></td>{% endif %}
+                <td data-label="Venta"><div class="tooltip-container"><input class="edit" id="vent_{{ p.id_producto }}" value="{{ p.precio_venta }}" disabled><span class="tooltip-text">{{ p.precio_venta }}</span></div></td>
+                <td data-label="Cantidad"><div class="tooltip-container"><input class="edit" id="cant_{{ p.id_producto }}" value="{{ p.cantidad }}" disabled><span class="tooltip-text">{{ p.cantidad }}</span></div></td>
+                {% if session.rol in ['admin', 'editor'] %}<td data-label="Precio Costo Total"><div class="tooltip-container"><input class="edit readonly" value="{{ (p.cantidad * p.precio_compra)|round(2) }}" readonly><span class="tooltip-text">{{ (p.cantidad * p.precio_compra)|round(2) }}</span></div></td>{% endif %}
+                <td data-label="Acción">
+                    <button class="btn" onclick="editarProducto('{{ p.id_producto }}')" id="btn_edit_{{ p.id_producto }}">Editar</button>
+                    <button class="btn" onclick="guardarProducto('{{ p.id_producto }}')" id="btn_save_{{ p.id_producto }}" style="display:none;">Guardar</button>
+                    <button class="btn btn-delete" onclick="confirmarEliminarProducto('{{ p.id_producto }}', '{{ p.nombre_producto }}')" id="btn_del_{{ p.id_producto }}">Eliminar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    
+    <div class="pagination">
+        <p>Página {{ pagina_actual }} de {{ total_paginas }} (Total: {{ total_productos }} productos)</p>
+        <div class="pagination-buttons">
+            {% set query_params = request.args.to_dict() %}
+            {% if pagina_actual > 1 %}
+            {% set _ = query_params.update({'pagina': pagina_actual - 1}) %}
+            <a href="{{ url_for('index', **query_params) }}" class="btn">← Anterior</a>
+            {% endif %}
+            
+            {% if pagina_actual < total_paginas %}
+            {% set _ = query_params.update({'pagina': pagina_actual + 1}) %}
+            <a href="{{ url_for('index', **query_params) }}" class="btn">Siguiente →</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+
+<div id="proveedores" class="table-section">
+    <h3>Proveedores</h3>
+    <p id="msg_proveedores" class="ok"></p>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prov in proveedores %}
+            <tr id="fila_proveedor_{{ prov.id_proveedor }}">
+                <td data-label="ID"><input class="edit" value="{{ prov.id_proveedor }}" disabled></td>
+                <td data-label="Nombre"><div class="tooltip-container"><input class="edit" id="nombre_{{ prov.id_proveedor }}" value="{{ prov.nombre }}" disabled><span class="tooltip-text">{{ prov.nombre }}</span></div></td>
+                <td data-label="Teléfono"><div class="tooltip-container"><input class="edit" id="telefono_{{ prov.id_proveedor }}" value="{{ prov.telefono }}" disabled><span class="tooltip-text">{{ prov.telefono }}</span></div></td>
+                <td data-label="Email"><div class="tooltip-container"><input class="edit" id="email_{{ prov.id_proveedor }}" value="{{ prov.email }}" disabled><span class="tooltip-text">{{ prov.email }}</span></div></td>
+                <td data-label="Acción">
+                    <button class="btn" onclick="editarProveedor('{{ prov.id_proveedor }}')" id="btn_edit_prov_{{ prov.id_proveedor }}">Editar</button>
+                    <button class="btn" onclick="guardarProveedor('{{ prov.id_proveedor }}')" id="btn_save_prov_{{ prov.id_proveedor }}" style="display:none;">Guardar</button>
+                    <button class="btn btn-delete" onclick="confirmarEliminarProveedor('{{ prov.id_proveedor }}', '{{ prov.nombre }}')" id="btn_del_prov_{{ prov.id_proveedor }}">Eliminar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<div id="tipos" class="table-section">
+    <h3>Tipos de Producto</h3>
+    <p id="msg_tipos" class="ok"></p>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre Tipo</th>
+                <th>Descripción</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in tipos %}
+            <tr id="fila_tipo_{{ t.id_tipo }}">
+                <td data-label="ID"><input class="edit" value="{{ t.id_tipo }}" disabled></td>
+                <td data-label="Nombre Tipo"><div class="tooltip-container"><input class="edit" id="nombre_tipo_{{ t.id_tipo }}" value="{{ t.nombre_tipo }}" disabled><span class="tooltip-text">{{ t.nombre_tipo }}</span></div></td>
+                <td data-label="Descripción"><div class="tooltip-container"><input class="edit" id="descripcion_tipo_{{ t.id_tipo }}" value="{{ t.descripcion }}" disabled><span class="tooltip-text">{{ t.descripcion }}</span></div></td>
+                <td data-label="Acción">
+                    <button class="btn" onclick="editarTipo('{{ t.id_tipo }}')" id="btn_edit_tipo_{{ t.id_tipo }}">Editar</button>
+                    <button class="btn" onclick="guardarTipo('{{ t.id_tipo }}')" id="btn_save_tipo_{{ t.id_tipo }}" style="display:none;">Guardar</button>
+                    <button class="btn btn-delete" onclick="confirmarEliminarTipo('{{ t.id_tipo }}', '{{ t.nombre_tipo }}')" id="btn_del_tipo_{{ t.id_tipo }}">Eliminar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<div id="marcas" class="table-section">
+    <h3>Marcas</h3>
+    <p id="msg_marcas" class="ok"></p>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre Marca</th>
+                <th>Descripción</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in marcas %}
+            <tr id="fila_marca_{{ m.id_marca }}">
+                <td data-label="ID"><input class="edit" value="{{ m.id_marca }}" disabled></td>
+                <td data-label="Nombre Marca"><div class="tooltip-container"><input class="edit" id="nombre_marca_{{ m.id_marca }}" value="{{ m.nombre_marca }}" disabled><span class="tooltip-text">{{ m.nombre_marca }}</span></div></td>
+                <td data-label="Descripción"><div class="tooltip-container"><input class="edit" id="descripcion_marca_{{ m.id_marca }}" value="{{ m.descripcion }}" disabled><span class="tooltip-text">{{ m.descripcion }}</span></div></td>
+                <td data-label="Acción">
+                    <button class="btn" onclick="editarMarca('{{ m.id_marca }}')" id="btn_edit_marca_{{ m.id_marca }}">Editar</button>
+                    <button class="btn" onclick="guardarMarca('{{ m.id_marca }}')" id="btn_save_marca_{{ m.id_marca }}" style="display:none;">Guardar</button>
+                    <button class="btn btn-delete" onclick="confirmarEliminarMarca('{{ m.id_marca }}', '{{ m.nombre_marca }}')" id="btn_del_marca_{{ m.id_marca }}">Eliminar</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<br>
+
+
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+function mostrarTabla() {
+    const valor = document.getElementById("tablaSelector").value;
+    document.querySelectorAll(".table-section").forEach(sec => sec.style.display = "none");
+    document.getElementById(valor).style.display = "block";
+}
+mostrarTabla();
+
+
+function aplicarFiltros() {
+    const busqueda = document.getElementById("busquedaProducto").value;
+    const busquedaDesc = document.getElementById("busquedaDescripcion").value;
+    const filtroTipo = document.getElementById("filtroTipo").value;
+    const filtroProveedor = document.getElementById("filtroProveedor").value;
+    const filtroMarca = document.getElementById("filtroMarca").value;
+    const filtroStock = document.getElementById("filtroStock").value;
+    
+    const params = new URLSearchParams();
+    if (busqueda) params.append('busqueda', busqueda);
+    if (busquedaDesc) params.append('busqueda_desc', busquedaDesc);
+    if (filtroTipo) params.append('tipo', filtroTipo);
+    if (filtroProveedor) params.append('proveedor', filtroProveedor);
+    if (filtroMarca) params.append('marca', filtroMarca);
+    if (filtroStock) params.append('stock', filtroStock);
+    
+    window.location.href = "/?" + params.toString();
+}
+
+function limpiarFiltros() {
+    window.location.href = "/";
+}
+
+
+function editarProducto(id) {
+    const controls = document.querySelectorAll("#fila_producto_" + id + " input, #fila_producto_" + id + " select");
+    controls.forEach(ctrl => {
+        if (!ctrl.id.includes("neto") && !ctrl.id.includes("iva") && ctrl.id !== "") ctrl.disabled = false;
+    });
+    document.getElementById("btn_edit_" + id).style.display = "none";
+    document.getElementById("btn_save_" + id).style.display = "inline-block";
+    document.getElementById("compr_" + id).addEventListener("input", () => recalcular(id));
+    document.getElementById("porc_" + id).addEventListener("input", () => recalcular(id));
+}
+
+function recalcular(id) {
+    let compra = parseFloat(document.getElementById("compr_" + id).value) || 0;
+    let porc = parseFloat(document.getElementById("porc_" + id).value) || 0;
+    let neto = compra / (1 - (porc / 100));
+    let iva = neto + (neto * 0.19);
+    document.getElementById("neto_" + id).value = neto.toFixed(2);
+    document.getElementById("iva_" + id).value = iva.toFixed(2);
+}
+
+function guardarProducto(id) {
+    let compra = parseFloat(document.getElementById("compr_" + id).value);
+    let porc = parseFloat(document.getElementById("porc_" + id).value);
+    let neto = compra + (compra * porc / 100);
+    let iva = neto + (neto * 0.19);
+    let venta = parseFloat(document.getElementById("vent_" + id).value);
+
+    let datos = {
+        id_producto: id,
+        codigo_barra: document.getElementById("cb_" + id).value,
+        nombre_producto: document.getElementById("nom_" + id).value,
+        descripcion: document.getElementById("des_" + id).value,
+        id_tipo: document.getElementById("tipo_" + id).value,
+        id_proveedor: document.getElementById("prov_" + id).value,
+        id_marca: document.getElementById("marc_" + id).value,
+        precio_compra: compra,
+        porcentaje_ganancia: porc,
+        precio_neto: neto,
+        iva: iva,
+        precio_venta: venta,
+        cantidad: parseInt(document.getElementById("cant_" + id).value)
+    };
+
+    fetch("/actualizar_producto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.querySelectorAll("#fila_producto_" + id + " input, #fila_producto_" + id + " select").forEach(inp => inp.disabled = true);
+            document.getElementById("btn_save_" + id).style.display = "none";
+            document.getElementById("btn_edit_" + id).style.display = "inline-block";
+            document.getElementById("msg_productos").innerText = "✔ Producto " + id + " actualizado correctamente.";
+        }
+    });
+}
+
+
+function editarProveedor(id) {
+    const inputs = document.querySelectorAll("#fila_proveedor_" + id + " input");
+    inputs.forEach(inp => inp.disabled = false);
+    document.getElementById("btn_edit_prov_" + id).style.display = "none";
+    document.getElementById("btn_save_prov_" + id).style.display = "inline-block";
+}
+
+function guardarProveedor(id) {
+    const datos = {
+        id_proveedor: id,
+        nombre: document.getElementById("nombre_" + id).value,
+        telefono: document.getElementById("telefono_" + id).value,
+        email: document.getElementById("email_" + id).value
+    };
+    fetch("/actualizar_proveedor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.querySelectorAll("#fila_proveedor_" + id + " input").forEach(inp => inp.disabled = true);
+            document.getElementById("btn_save_prov_" + id).style.display = "none";
+            document.getElementById("btn_edit_prov_" + id).style.display = "inline-block";
+            document.getElementById("msg_proveedores").innerText = "✔ Proveedor " + id + " actualizado correctamente.";
+        }
+    });
+}
+
+
+function editarTipo(id) {
+    const inputs = document.querySelectorAll("#fila_tipo_" + id + " input");
+    inputs.forEach(inp => inp.disabled = false);
+    document.getElementById("btn_edit_tipo_" + id).style.display = "none";
+    document.getElementById("btn_save_tipo_" + id).style.display = "inline-block";
+}
+
+function guardarTipo(id) {
+    const datos = {
+        id_tipo: id,
+        nombre_tipo: document.getElementById("nombre_tipo_" + id).value,
+        descripcion: document.getElementById("descripcion_tipo_" + id).value
+    };
+    fetch("/actualizar_tipo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.querySelectorAll("#fila_tipo_" + id + " input").forEach(inp => inp.disabled = true);
+            document.getElementById("btn_save_tipo_" + id).style.display = "none";
+            document.getElementById("btn_edit_tipo_" + id).style.display = "inline-block";
+            document.getElementById("msg_tipos").innerText = "✔ Tipo " + id + " actualizado correctamente.";
+        }
+    });
+}
+
+
+function editarMarca(id) {
+    const inputs = document.querySelectorAll("#fila_marca_" + id + " input");
+    inputs.forEach(inp => inp.disabled = false);
+    document.getElementById("btn_edit_marca_" + id).style.display = "none";
+    document.getElementById("btn_save_marca_" + id).style.display = "inline-block";
+}
+
+function guardarMarca(id) {
+    const datos = {
+        id_marca: id,
+        nombre_marca: document.getElementById("nombre_marca_" + id).value,
+        descripcion: document.getElementById("descripcion_marca_" + id).value
+    };
+    fetch("/actualizar_marca", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(datos)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.querySelectorAll("#fila_marca_" + id + " input").forEach(inp => inp.disabled = true);
+            document.getElementById("btn_save_marca_" + id).style.display = "none";
+            document.getElementById("btn_edit_marca_" + id).style.display = "inline-block";
+            document.getElementById("msg_marcas").innerText = "✔ Marca " + id + " actualizada correctamente.";
+        }
+    });
+}
+
+
+
+function confirmarEliminarProducto(id, nombre) {
+    if (confirm(`¿Está seguro de que desea eliminar el producto "${nombre}"? Esta acción no se puede deshacer.`)) {
+        eliminarProducto(id);
+    }
+}
+
+function eliminarProducto(id) {
+    fetch('/eliminar_producto', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id_producto: id})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.getElementById("fila_producto_" + id).remove();
+            document.getElementById("msg_productos").innerText = "✔ Producto eliminado correctamente.";
+            setTimeout(() => {
+                document.getElementById("msg_productos").innerText = "";
+            }, 3000);
+        } else {
+            alert("Error al eliminar: " + data.mensaje);
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Error al eliminar el producto");
+    });
+}
+
+function confirmarEliminarProveedor(id, nombre) {
+    if (confirm(`¿Está seguro de que desea eliminar el proveedor "${nombre}"? Esta acción no se puede deshacer.`)) {
+        eliminarProveedor(id);
+    }
+}
+
+function eliminarProveedor(id) {
+    fetch('/eliminar_proveedor', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id_proveedor: id})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.getElementById("fila_proveedor_" + id).remove();
+            document.getElementById("msg_proveedores").innerText = "✔ Proveedor eliminado correctamente.";
+            setTimeout(() => {
+                document.getElementById("msg_proveedores").innerText = "";
+            }, 3000);
+        } else {
+            document.getElementById("msg_proveedores").innerText = data.mensaje || "No se pudo eliminar el proveedor.";
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Error al eliminar el proveedor");
+    });
+}
+
+function confirmarEliminarTipo(id, nombre) {
+    if (confirm(`¿Está seguro de que desea eliminar el tipo de producto "${nombre}"? Esta acción no se puede deshacer.`)) {
+        eliminarTipo(id);
+    }
+}
+
+function eliminarTipo(id) {
+    fetch('/eliminar_tipo', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id_tipo: id})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.getElementById("fila_tipo_" + id).remove();
+            document.getElementById("msg_tipos").innerText = "✔ Tipo de producto eliminado correctamente.";
+            setTimeout(() => {
+                document.getElementById("msg_tipos").innerText = "";
+            }, 3000);
+        } else {
+            document.getElementById("msg_tipos").innerText = data.mensaje || "No se pudo eliminar el tipo de producto.";
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Error al eliminar el tipo de producto");
+    });
+}
+
+function confirmarEliminarMarca(id, nombre) {
+    if (confirm(`¿Está seguro de que desea eliminar la marca "${nombre}"? Esta acción no se puede deshacer.`)) {
+        eliminarMarca(id);
+    }
+}
+
+function eliminarMarca(id) {
+    fetch('/eliminar_marca', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({id_marca: id})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "ok") {
+            document.getElementById("fila_marca_" + id).remove();
+            document.getElementById("msg_marcas").innerText = "✔ Marca eliminada correctamente.";
+            setTimeout(() => {
+                document.getElementById("msg_marcas").innerText = "";
+            }, 3000);
+        } else {
+            document.getElementById("msg_marcas").innerText = data.mensaje || "No se pudo eliminar la marca.";
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        alert("Error al eliminar la marca");
+    });
+}
+
+
+
+let html5QrcodeScannerTablas = null;
+let scannerActivoTablas = false;
+
+function verificarSoporteCameraTablas() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+}
+
+window.addEventListener("load", function() {
+    const btnCamara = document.getElementById("btn-camara-tablas");
+    
+    if (verificarSoporteCameraTablas()) {
+        btnCamara.style.display = "inline-block";
+        console.log('✓ Botón de cámara habilitado en tablas');
+    } else {
+        console.log('✗ Cámara no disponible');
+    }
+});
+
+function toggleCamaraTablas() {
+    if (scannerActivoTablas) {
+        cerrarCamaraTablas();
+    } else {
+        abrirCamaraTablas();
+    }
+}
+
+async function abrirCamaraTablas() {
+    const contenedor = document.getElementById("contenedor-camara-tablas");
+    const btnCamara = document.getElementById("btn-camara-tablas");
+    const estado = document.getElementById("estado-escaneo-tablas");
+    
+    console.log('Iniciando cámara para tablas...');
+    
+    try {
+        if (typeof Html5Qrcode === 'undefined') {
+            throw new Error('La librería de escaneo no está cargada. Recarga la página.');
+        }
+        
+        contenedor.style.display = "block";
+        btnCamara.textContent = "⏹️ Cerrar Cámara";
+        estado.className = "scanning";
+        estado.textContent = "Preparando cámara...";
+        
+        if (!html5QrcodeScannerTablas) {
+            html5QrcodeScannerTablas = new Html5Qrcode("video-camara-tablas");
+        }
+        
+        const config = {
+            fps: 10,
+            qrbox: { width: 300, height: 150 },
+            formatsToSupport: [
+                Html5QrcodeScanType.SCAN_TYPE_CAMERA
+            ],
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
+        };
+        
+        await html5QrcodeScannerTablas.start(
+            { facingMode: "environment" },
+            config,
+            onScanSuccessTablas,
+            onScanErrorTablas
+        );
+        
+        scannerActivoTablas = true;
+        estado.textContent = "📷 Apunta al código de barras del producto";
+        console.log('✓ Cámara iniciada correctamente');
+        
+    } catch (error) {
+        console.error("Error al abrir cámara:", error);
+        estado.className = "error";
+        estado.textContent = "⚠ Error: " + error.message;
+        scannerActivoTablas = false;
+        
+        setTimeout(() => {
+            contenedor.style.display = "none";
+            btnCamara.textContent = "📷 Escanear";
+        }, 3000);
+    }
+}
+
+function onScanSuccessTablas(decodedText, decodedResult) {
+    console.log('✓ Código detectado en tablas:', decodedText);
+    
+    const estado = document.getElementById("estado-escaneo-tablas");
+    const busquedaInput = document.getElementById("busquedaProducto");
+    
+    
+    busquedaInput.value = decodedText;
+    
+    
+    estado.className = "success";
+    estado.textContent = "✓ Código capturado: " + decodedText;
+    
+    
+    setTimeout(() => {
+        cerrarCamaraTablas();
+    }, 800);
+}
+
+function onScanErrorTablas(errorMessage) {
+    
+}
+
+function cerrarCamaraTablas() {
+    const contenedor = document.getElementById("contenedor-camara-tablas");
+    const btnCamara = document.getElementById("btn-camara-tablas");
+    const estado = document.getElementById("estado-escaneo-tablas");
+    
+    console.log('Cerrando cámara de tablas...');
+    
+    if (html5QrcodeScannerTablas && scannerActivoTablas) {
+        html5QrcodeScannerTablas.stop()
+            .then(() => {
+                console.log('✓ Cámara cerrada');
+                scannerActivoTablas = false;
+                contenedor.style.display = "none";
+                btnCamara.textContent = "📷 Escanear";
+                estado.className = "scanning";
+                estado.textContent = "Preparando cámara...";
+            })
+            .catch(err => {
+                console.error('Error al cerrar cámara:', err);
+                scannerActivoTablas = false;
+            });
+    } else {
+        contenedor.style.display = "none";
+        btnCamara.textContent = "📷 Escanear";
+        scannerActivoTablas = false;
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    
+    
+    
+    const inputs = document.querySelectorAll('input.edit, select.edit');
+    
+    inputs.forEach(input => {
+        
+        input.addEventListener('input', function() {
+            const container = this.closest('.tooltip-container');
+            if (container) {
+                const tooltipSpan = container.querySelector('.tooltip-text');
+                if (tooltipSpan) {
+                    tooltipSpan.textContent = this.value;
+                }
+            }
+        });
+        
+        
+        input.addEventListener('change', function() {
+            const container = this.closest('.tooltip-container');
+            if (container) {
+                const tooltipSpan = container.querySelector('.tooltip-text');
+                if (tooltipSpan) {
+                    tooltipSpan.textContent = this.value || this.options[this.selectedIndex].text;
+                }
+            }
+        });
+    });
+    
+    
+    function colorearProductosPorStock() {
+        const filas = document.querySelectorAll("#tablaProductos tbody tr");
+        
+        filas.forEach(fila => {
+            
+            const inputStock = fila.querySelector("[id^='cant_']");
+            if (inputStock) {
+                const stock = parseInt(inputStock.value, 10);
+                
+                const celdas = fila.querySelectorAll("td:not(:last-child) input, td:not(:last-child) select");
+                
+                celdas.forEach(celda => {
+                    
+                    celda.classList.remove('stock-critico', 'stock-bajo', 'stock-normal');
+                    
+                    
+                    if (stock === 0) {
+                        celda.classList.add('stock-critico'); 
+                    } else if (stock >= 1 && stock <= 8) {
+                        celda.classList.add('stock-bajo'); 
+                    } else {
+                        celda.classList.add('stock-normal'); 
+                    }
+                });
+            }
+        });
+    }
+    
+    
+    colorearProductosPorStock();
+    
+    
+    const inputsStock = document.querySelectorAll("[id^='cant_']");
+    inputsStock.forEach(input => {
+        input.addEventListener('change', colorearProductosPorStock);
+    });
+});
+</script>
+
+</body>
+</html>

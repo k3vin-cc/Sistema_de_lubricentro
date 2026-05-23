@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Gestión de Inventario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="login-box">
+            <div class="login-header">
+                <h1>Gestión de Inventario</h1>
+                <p>Sistema de Control Automotriz</p>
+            </div>
+
+            <form method="POST" action="{{ url_for('login') }}" class="login-form" autocomplete="off">
+                <div class="form-group">
+                    <label for="usuario">Usuario</label>
+                    <input 
+                        type="text" 
+                        id="usuario" 
+                        name="usuario" 
+                        placeholder="Ingresa tu usuario"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="contrasena">Contraseña</label>
+                    <input 
+                        type="password" 
+                        id="contrasena" 
+                        name="contrasena" 
+                        placeholder="Ingresa tu contraseña"
+                        autocomplete="off"
+                        required
+                    >
+                </div>
+
+                {% if error %}
+                <div class="error-message">
+                    <strong>{% if 'expirado' in error %}⏱️ Sesión Expirada{% else %}Error{% endif %}:</strong> {{ error }}
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn-login">Iniciar Sesión</button>
+            </form>
+
+            <div class="login-footer">
+                <p>Sistema de Gestión de Inventario Automotriz</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

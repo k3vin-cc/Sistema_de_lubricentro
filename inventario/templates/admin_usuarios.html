@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Usuarios - Inventario</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_usuarios.css') }}">
+    <style>
+    .main-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:var(--bg-card);border-radius:10px;border:1px solid var(--border);margin-bottom:1rem}
+    .nav-links{display:flex;gap:12px;align-items:center}
+    .main-nav a{color:var(--text-primary);text-decoration:none;padding:8px 12px;border-radius:8px;background:transparent;border:2px solid transparent;font-weight:600}
+    .main-nav a:hover{background:var(--bg-input);border-color:var(--border-light);color:var(--primary)}
+    .main-nav a.active{background:linear-gradient(135deg,var(--primary) 0%,var(--primary-dark) 100%);color:white;border-color:transparent;box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+    .nav-brand{margin-left:auto;font-weight:700;color:var(--text-primary);}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <nav class="main-nav">
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="{% if request.path == url_for('index') %}active{% endif %}">Stock Productos</a>
+                {% if session.rol in ['admin', 'editor'] %}
+                <a href="{{ url_for('agregar') }}" class="{% if request.path == url_for('agregar') %}active{% endif %}">Ingresar Nuevo Inventario</a>
+                {% endif %}
+                <a href="{{ url_for('ventas') }}" class="{% if request.path == url_for('ventas') %}active{% endif %}">Zona de Ventas</a>
+                {% if session.rol in ['admin', 'editor'] %}
+                <a href="{{ url_for('historial') }}" class="{% if request.path == url_for('historial') %}active{% endif %}">📊 Historial de Ventas</a>
+                {% endif %}
+                {% if session.rol == 'admin' %}
+                <a href="{{ url_for('admin_usuarios') }}" class="{% if request.path == url_for('admin_usuarios') %}active{% endif %}">👥 Usuarios</a>
+                {% endif %}
+            </div>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="color: #666; font-size: 14px;">{{ session.usuario }} <strong>({{ session.rol }})</strong></span>
+                <a href="{{ url_for('logout') }}" style="color: #dc3545; text-decoration: none; font-weight: 600; padding: 8px 12px; background: #f8d7da; border-radius: 6px; border: none; cursor: pointer;">🚪 Salir</a>
+            </div>
+            <span class="nav-brand">Autosolution</span>
+        </nav>
+
+        <h1 style="margin-bottom: 1.5rem; color: var(--text-primary);">👥 Administración de Usuarios</h1>
+
+        {% if error %}
+        <div class="alert alert-error">
+            <strong>✗ Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+
+        {% if exito %}
+        <div class="alert alert-success">
+            <strong>✓ Éxito:</strong> {{ exito }}
+        </div>
+        {% endif %}
+
+        <div class="content">
+            
+            <div class="section">
+                <h2>➕ Crear Nuevo Usuario</h2>
+                <form method="POST" class="form-crear-usuario">
+                    <input type="hidden" name="accion" value="crear">
+                    
+                    <div class="form-group">
+                        <label for="usuario">Usuario:</label>
+                        <input type="text" id="usuario" name="usuario" required placeholder="Nombre de usuario">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contrasena">Contraseña:</label>
+                        <input type="password" id="contrasena" name="contrasena" required placeholder="Contraseña segura">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="rol">Rol:</label>
+                        <select id="rol" name="rol" required>
+                            <option value="">-- Seleccionar rol --</option>
+                            <option value="admin">Administrador</option>
+                            <option value="editor">Editor</option>
+                            <option value="usuario">Usuario Regular</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Email:</label>
+                        <input type="email" id="email" name="email" placeholder="correo@ejemplo.com">
+                    </div>
+
+                    <button type="submit" class="btn btn-success">Crear Usuario</button>
+                </form>
+            </div>
+
+            
+            <div class="section">
+                <h2>📋 Lista de Usuarios</h2>
+                {% if usuarios %}
+                <div class="table-responsive">
+                    <table class="tabla-usuarios">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Usuario</th>
+                                <th>Rol</th>
+                                <th>Email</th>
+                                <th>Estado</th>
+                                <th>Creado</th>
+                                <th>Última Sesión</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in usuarios %}
+                            <tr class="fila-usuario" data-id="{{ usuario.id_usuario }}">
+                                <td>{{ usuario.id_usuario }}</td>
+                                <td><strong>{{ usuario.usuario }}</strong></td>
+                                <td>
+                                    <span class="badge {% if usuario.rol == 'admin' %}badge-admin{% else %}badge-user{% endif %}">
+                                        {{ usuario.rol }}
+                                    </span>
+                                </td>
+                                <td>{{ usuario.email or 'N/A' }}</td>
+                                <td>
+                                    <span class="estado {% if usuario.activo %}activo{% else %}inactivo{% endif %}">
+                                        {% if usuario.activo %}✓ Activo{% else %}✗ Inactivo{% endif %}
+                                    </span>
+                                </td>
+                                <td>{{ usuario.fecha_creacion[:10] if usuario.fecha_creacion else 'N/A' }}</td>
+                                <td>{{ usuario.fecha_ultima_sesion[:10] if usuario.fecha_ultima_sesion else 'Nunca' }}</td>
+                                <td class="acciones">
+                                    <button class="btn btn-sm btn-editar" data-id="{{ usuario.id_usuario }}" data-usuario="{{ usuario.usuario }}" data-rol="{{ usuario.rol }}" data-email="{{ usuario.email or '' }}" onclick="mostrarEditarForm(this)">
+                                        ✏️ Editar
+                                    </button>
+                                    {% if usuario.id_usuario != session.id_usuario %}
+                                    <form method="POST" style="display:inline-block;" onsubmit="return confirm('¿Cambiar estado del usuario?');">
+                                        <input type="hidden" name="accion" value="cambiar_estado">
+                                        <input type="hidden" name="id_usuario" value="{{ usuario.id_usuario }}">
+                                        <button type="submit" class="btn btn-sm {% if usuario.activo %}btn-desactivar{% else %}btn-activar{% endif %}">
+                                            {% if usuario.activo %}🔒 Desactivar{% else %}🔓 Activar{% endif %}
+                                        </button>
+                                    </form>
+                                    <form method="POST" style="display:inline-block;" onsubmit="return confirm('¿Eliminar usuario? Esta acción no se puede deshacer.');">
+                                        <input type="hidden" name="accion" value="eliminar">
+                                        <input type="hidden" name="id_usuario" value="{{ usuario.id_usuario }}">
+                                        <button type="submit" class="btn btn-sm btn-peligro">
+                                            🗑️ Eliminar
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="sin-datos">No hay usuarios registrados</p>
+                {% endif %}
+            </div>
+
+            
+            {% if session.rol == 'admin' %}
+            <div class="section" style="border: 2px solid #dc3545; background: #fff5f5;">
+                <h2 style="color: #dc3545;">⚠️ Zona de Peligro</h2>
+                <p style="color: #666; margin-bottom: 1rem;">
+                    Las acciones en esta sección son irreversibles y afectan datos críticos del sistema.
+                </p>
+                <div style="padding: 15px; background: white; border-radius: 8px; border: 1px solid #dc3545;">
+                    <h3 style="color: #dc3545; margin-bottom: 0.5rem;">🗑️ Borrar Historial de Ventas</h3>
+                    <p style="color: #666; margin-bottom: 1rem; font-size: 14px;">
+                        Esta acción eliminará <strong>TODOS</strong> los registros de la tabla HistorialVentas de forma permanente.
+                        No se puede deshacer.
+                    </p>
+                    <button type="button" class="btn btn-peligro" onclick="confirmarBorrarHistorial()" style="font-weight: bold;">
+                        🗑️ Borrar Todo el Historial de Ventas
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+
+            
+            <div id="modalEditar" class="modal">
+                <div class="modal-content">
+                    <span class="close" onclick="cerrarModal()">&times;</span>
+                    <h2>✏️ Editar Usuario</h2>
+                    <form method="POST" id="formEditar">
+                        <input type="hidden" name="accion" value="editar">
+                        <input type="hidden" name="id_usuario" id="editarId" value="">
+
+                        <div class="form-group">
+                            <label for="editarUsuario">Usuario:</label>
+                            <input type="text" id="editarUsuario" name="usuario" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editarRol">Rol:</label>
+                            <select id="editarRol" name="rol" required>
+                                <option value="admin">Administrador</option>
+                                <option value="editor">Editor</option>
+                                <option value="usuario">Usuario Regular</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editarEmail">Email:</label>
+                            <input type="email" id="editarEmail" name="email">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="editarContrasena">Nueva Contraseña (dejar en blanco para no cambiar):</label>
+                            <input type="password" id="editarContrasena" name="contrasena_nueva" placeholder="Dejar en blanco para mantener la actual">
+                        </div>
+
+                        <div class="modal-buttons">
+                            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+                            <button type="button" class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function mostrarEditarForm(btn) {
+            const id = btn.getAttribute('data-id');
+            const usuario = btn.getAttribute('data-usuario');
+            const rol = btn.getAttribute('data-rol');
+            const email = btn.getAttribute('data-email');
+            
+            document.getElementById('editarId').value = id;
+            document.getElementById('editarUsuario').value = usuario;
+            document.getElementById('editarRol').value = rol;
+            document.getElementById('editarEmail').value = email;
+            document.getElementById('modalEditar').style.display = 'block';
+        }
+
+        function cerrarModal() {
+            document.getElementById('modalEditar').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('modalEditar');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function confirmarBorrarHistorial() {
+            const confirmacion1 = confirm('⚠️ ADVERTENCIA: ¿Estás seguro de que deseas borrar TODO el historial de ventas?\n\nEsta acción eliminará TODOS los registros de forma PERMANENTE y NO se puede deshacer.');
+            
+            if (!confirmacion1) {
+                return;
+            }
+            
+            
+            const confirmacion2 = confirm('⚠️ ÚLTIMA ADVERTENCIA: Esta es tu última oportunidad para cancelar.\n\n¿Realmente deseas eliminar TODOS los registros del historial de ventas?');
+            
+            if (!confirmacion2) {
+                return;
+            }
+            
+            
+            fetch('{{ url_for("borrar_historial_ventas") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✓ ' + data.mensaje);
+                    location.reload();
+                } else {
+                    alert('✗ Error: ' + (data.error || 'No se pudo eliminar el historial'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('✗ Error al comunicarse con el servidor');
+            });
+        }
+    </script>
+</body>
+</html>

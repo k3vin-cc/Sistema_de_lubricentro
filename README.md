@@ -98,3 +98,54 @@ El sistema garantiza la integridad de los datos financieros del taller mediante 
 
 ---
 
+## Arquitectura de Base de Datos Local
+
+La base de datos de productos (`productos.db`) estructura el inventario de la siguiente forma:
+
+```mermaid
+erDiagram
+    PROVEEDOR ||--o{ PRODUCTO : "sugiere_y_vende"
+    MARCA ||--o{ PRODUCTO : "fabrica"
+    TIPO_PRODUCTO ||--o{ PRODUCTO : "agrupa"
+    PRODUCTO ||--o{ DETALLE_VENTA : "se_incluye_en"
+    VENTA ||--|{ DETALLE_VENTA : "contiene"
+
+    PROVEEDOR {
+        int id PK
+        string nombre
+        string contacto
+    }
+    MARCA {
+        int id PK
+        string nombre
+    }
+    TIPO_PRODUCTO {
+        int id PK
+        string nombre
+    }
+    PRODUCTO {
+        int id PK
+        string nombre
+        int stock
+        real precio_compra
+        real ganancia_porcentaje
+        real precio_venta
+        int marca_id FK
+        int tipo_id FK
+        int proveedor_id FK
+    }
+    VENTA {
+        int id PK
+        string fecha
+        real total
+        string cliente_nombre
+    }
+    DETALLE_VENTA {
+        int id PK
+        int venta_id FK
+        int producto_id FK
+        int cantidad
+        real precio_unitario
+        real subtotal
+    }
+```
