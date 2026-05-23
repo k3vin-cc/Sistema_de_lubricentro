@@ -96,4 +96,3 @@ El sistema garantiza la integridad de los datos financieros del taller mediante 
      python generar_certificados.py
      ```
 
-```
